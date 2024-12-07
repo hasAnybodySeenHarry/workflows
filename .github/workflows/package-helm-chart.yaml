@@ -1,0 +1,96 @@
+name: Package Helm Chart
+on:
+  workflow_call:
+    inputs:
+      helm_version:
+        required: true
+        type: string
+      helm_folder:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      repository_name:
+        required: true
+        type: string
+      image_digest:
+        required: true
+        type: string
+    secrets:
+      docker_username:
+        required: true
+      helm_repo_url:
+        required: true
+      helm_repo_pat:
+        required: true
+      helm_repo_target:
+        required: true
+      helm_repo_owner:
+        required: true
+      helm_repo_name:
+        required: true
+jobs:
+  package-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup yq tools
+        uses: mikefarah/yq@v4.35.2
+
+      - name: Update helm files
+        run: |
+          CHART_VERSION="$(cat VERSION_HELM)"
+          APP_VERSION="$(cat VERSION)"
+          HELM_FOLDER=${{ inputs.helm_folder }}
+          RUN_NUMBER=${{ github.run_number }}
+
+          REPO_NAME=${{ inputs.repository_name }}
+          IMAGE_TAG=${{ inputs.image_tag }}
+          IMAGE_DIGEST=${{ inputs.image_digest }}
+          DOCKERHUB_USERNAME=${{ secrets.docker_username }}
+
+          yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
+          yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
+
+          yq eval -i ".image.repository = \"${DOCKERHUB_USERNAME}/${REPO_NAME}\"" "./${HELM_FOLDER}/values.yaml"
+          yq eval -i ".image.tag = \"${IMAGE_TAG}@${IMAGE_DIGEST}\"" "./${HELM_FOLDER}/values.yaml"
+
+          helm lint ./${HELM_FOLDER}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ inputs.helm_version }}
+
+      - name: Package Helm chart
+        run: |
+          helm package ./${{ inputs.helm_folder }}
+          helm repo index ./${{ inputs.helm_folder }} --url ${{ secrets.helm_repo_url }}
+
+      - name: Clone Helm repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
+          ref: ${{ secrets.helm_repo_target }}
+          token: ${{ secrets.helm_repo_pat }}
+          path: ./${{ secrets.helm_repo_name }}
+
+      - name: Replace helm packages
+        run: |
+          APP_FOLDER="./${{ secrets.helm_repo_name }}/${{ inputs.helm_folder }}/${{ inputs.repository_name }}"
+          mkdir -p ${APP_FOLDER}
+          cp *.tgz ${APP_FOLDER}/
+
+      - name: Push Helm packages
+        run: |
+          cd ${{ secrets.helm_repo_name }}
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+          git pull origin ${{ secrets.helm_repo_target }}
+          git add .
+          git commit -m "${{ github.ref_name }}"
+          git push origin ${{ secrets.helm_repo_target }}

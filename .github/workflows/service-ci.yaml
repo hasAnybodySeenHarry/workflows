@@ -112,66 +112,18 @@ jobs:
       docker_password: ${{ secrets.docker_password }}
 
   package-helm:
-    runs-on: ubuntu-latest
     needs: [repo-meta, containerize]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup yq tools
-        uses: mikefarah/yq@v4.35.2
-
-      - name: Update helm files
-        run: |
-          CHART_VERSION="$(cat VERSION_HELM)"
-          APP_VERSION="$(cat VERSION)"
-          HELM_FOLDER=${{ inputs.helm_folder }}
-          RUN_NUMBER=${{ github.run_number }}
-
-          REPO_NAME=${{ needs.repo-meta.outputs.repo_name }}
-          IMAGE_NAME=${{ needs.repo-meta.outputs.image_name }}
-          IMAGE_DIGEST=${{ needs.containerize.outputs.image_digest }}
-          DOCKERHUB_USERNAME=${{ secrets.docker_username }}
-
-          yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
-          yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
-
-          yq eval -i ".image.repository = \"${DOCKERHUB_USERNAME}/${REPO_NAME}\"" "./${HELM_FOLDER}/values.yaml"
-          yq eval -i ".image.tag = \"${IMAGE_NAME}@${IMAGE_DIGEST}\"" "./${HELM_FOLDER}/values.yaml"
-
-          helm lint ./${HELM_FOLDER}
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: ${{ inputs.helm_version }}
-
-      - name: Package Helm chart
-        run: |
-          helm package ./${{ inputs.helm_folder }}
-          helm repo index ./${{ inputs.helm_folder }} --url ${{ secrets.helm_repo_url }}
-
-      - name: Clone Helm repository
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
-          ref: ${{ secrets.helm_repo_target }}
-          token: ${{ secrets.helm_repo_pat }}
-          path: ./${{ secrets.helm_repo_name }}
-
-      - name: Replace helm packages
-        run: |
-          APP_FOLDER="./${{ secrets.helm_repo_name }}/${{ inputs.helm_folder }}/${{ needs.repo-meta.outputs.repo_name }}"
-          mkdir -p ${APP_FOLDER}
-          cp *.tgz ${APP_FOLDER}/
-
-      - name: Push Helm packages
-        run: |
-          cd ${{ secrets.helm_repo_name }}
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-
-          git pull origin ${{ secrets.helm_repo_target }}
-          git add .
-          git commit -m "${{ github.ref_name }}"
-          git push origin ${{ secrets.helm_repo_target }}
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/package-helm-chart.yaml@main
+    with:
+      helm_version: ${{ inputs.helm_version }}
+      helm_folder: ${{ inputs.helm_folder }}
+      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
+      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
+      image_digest: ${{ needs.containerize.outputs.image_digest }}
+    secrets:
+      docker_username: ${{ secrets.docker_username }}
+      helm_repo_url: ${{ secrets.helm_repo_url }}
+      helm_repo_pat: ${{ secrets.helm_repo_pat }}
+      helm_repo_target: ${{ secrets.helm_repo_target }}
+      helm_repo_owner: ${{ secrets.helm_repo_owner }}
+      helm_repo_name: ${{ secrets.helm_repo_name }}
