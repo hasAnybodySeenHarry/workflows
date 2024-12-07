@@ -25,7 +25,7 @@ jobs:
           CURRENT_BRANCH=${{ github.ref_name }}
           CURRENT_COMMIT=${{ github.sha }}
 
-          ISSUES=$(gh issue list --repo "$REPO" --label ${{ inputs.issue_label }} --state open --json number,title,body 2>/dev/null || echo '[]')
+          ISSUES=$(gh issue list --repo "$REPO" --label "${{ inputs.issue_label }}" --state open --json number,title,body 2>/dev/null || echo '[]')
 
           ISSUES=$(echo "$ISSUES" | tr -d '\000-\031')
 
