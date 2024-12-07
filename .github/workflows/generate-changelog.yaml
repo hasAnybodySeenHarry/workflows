@@ -1,0 +1,37 @@
+name: Generate Changelog
+on:
+  workflow_call:
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set Up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.0"
+
+      - name: Install GitHub Changelog Generator
+        run: |
+          gem install github_changelog_generator
+
+      - name: Generate Changelog
+        env:
+          CHANGELOG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          github_changelog_generator \
+            --user ${{ github.repository_owner }} \
+            --project ${{ github.event.repository.name }} \
+            --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and Push Changelog
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+          git pull origin ${{ github.ref_name }}
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG for ${{ github.sha }}"
+          git push origin ${{ github.ref_name }}
