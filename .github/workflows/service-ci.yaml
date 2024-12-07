@@ -45,14 +45,11 @@ on:
       helm_repo_name:
         required: true
 
-env:
-  GO_VERSION: "1.22"
-
 jobs:
   unit-tests:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/run-unit-tests.yaml@main
     with:
-      go_version: ${{ env.GO_VERSION }}
+      go_version: ${{ inputs.go_version }}
 
   create-unittest-issue:
     needs: [unit-tests]
