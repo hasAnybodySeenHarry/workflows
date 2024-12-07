@@ -100,22 +100,6 @@ jobs:
       helm_version: ${{ inputs.helm_version }}
       helm_folder: ${{ inputs.helm_folder }}
 
-  sonar-analysis:
-    runs-on: ubuntu-latest
-    needs: [unit-tests, static-analysis, validate-helm]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.sonar_token }}
-          # SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
   repo-meta:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/gen-repo-meta.yaml@main
 
@@ -128,6 +112,32 @@ jobs:
     secrets:
       docker_username: ${{ secrets.docker_username }}
       docker_password: ${{ secrets.docker_password }}
+
+  sonar-analysis:
+    runs-on: ubuntu-latest
+    needs: [containerize]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+      - name: SonarQube Quality Gate
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        with:
+          pollingTimeoutSec: 600
+        env:
+        SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+      - name: SonarQube Quality Gate check
+        run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
 
   package-helm:
     needs: [repo-meta, containerize]
