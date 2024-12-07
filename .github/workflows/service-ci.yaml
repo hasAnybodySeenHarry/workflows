@@ -45,11 +45,14 @@ on:
       helm_repo_name:
         required: true
 
+env:
+  GO_VERSION: ${{ inputs.go_version }}
+
 jobs:
   unit-tests:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/run-unit-tests.yaml@main
     with:
-      go_version: ${{ inputs.go_version }}
+      go_version: ${{ env.GO_VERSION }}
 
   create-unittest-issue:
     needs: [unit-tests]
@@ -74,144 +77,144 @@ jobs:
     with:
       go_version: ${{ inputs.go_version }}
 
-  # create-linting-issue:
-  #   needs: [static-analysis]
-  #   uses: hasAnybodySeenHarry/workflows/.github/workflows/create-issue.yaml@main
-  #   if: failure()
-  #   with:
-  #     assignees: ${{ github.actor }}
-  #     issue_template: .github/ACTIONS_ISSUE_TEMPLATES/static_analysis_alert.md
-  #     owner_repository: ${{ github.repository }}
-  #     commit_hash: ${{ github.sha }}
-  #     branch_name: ${{ github.ref_name }}
+  create-linting-issue:
+    needs: [static-analysis]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/create-issue.yaml@main
+    if: failure()
+    with:
+      assignees: ${{ github.actor }}
+      issue_template: .github/ACTIONS_ISSUE_TEMPLATES/static_analysis_alert.md
+      owner_repository: ${{ github.repository }}
+      commit_hash: ${{ github.sha }}
+      branch_name: ${{ github.ref_name }}
 
-  # close-linting-issues:
-  #   needs: [static-analysis]
-  #   uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
-  #   with:
-  #     issue_label: ${{ inputs.linting_issue_label }}
-  #     issue_title: ${{ inputs.linting_issue_title }}
+  close-linting-issues:
+    needs: [static-analysis]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
+    with:
+      issue_label: ${{ inputs.linting_issue_label }}
+      issue_title: ${{ inputs.linting_issue_title }}
 
-  # validate-helm:
-  #   uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
-  #   with:
-  #     helm_version: ${{ inputs.helm_version }}
-  #     helm_folder: ${{ inputs.helm_folder }}
+  validate-helm:
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/validate-helm-chart.yaml@main
+    with:
+      helm_version: ${{ inputs.helm_version }}
+      helm_folder: ${{ inputs.helm_folder }}
 
-  # repo-meta:
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     image_name: ${{ steps.container-image.outputs.IMAGE_NAME }}
-  #     repo_name: ${{ steps.repository-name.outputs.REPO_NAME }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+  repo-meta:
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.container-image.outputs.IMAGE_NAME }}
+      repo_name: ${{ steps.repository-name.outputs.REPO_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #     - name: Extract repository's name
-  #       id: repository-name
-  #       run: |
-  #         REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
-  #         echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_OUTPUT
+      - name: Extract repository's name
+        id: repository-name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d '/' -f 2)
+          echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_OUTPUT
 
-  #     - name: Create image name
-  #       id: container-image
-  #       run: |
-  #         BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/\//_/g')
-  #         IMAGE_NAME=${BRANCH_NAME}_${{ github.sha }}
-  #         echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+      - name: Create image name
+        id: container-image
+        run: |
+          BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/\//_/g')
+          IMAGE_NAME=${BRANCH_NAME}_${{ github.sha }}
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
 
-  # containerize:
-  #   runs-on: ubuntu-latest
-  #   needs: [unit-tests, static-analysis, validate-helm, repo-meta]
-  #   outputs:
-  #     image_digest: ${{ steps.image-digest.outputs.IMAGE_DIGEST }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+  containerize:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, static-analysis, validate-helm, repo-meta]
+    outputs:
+      image_digest: ${{ steps.image-digest.outputs.IMAGE_DIGEST }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #     - name: Login to DockerHub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: docker.io
-  #         username: ${{ inputs.docker_username }}
-  #         password: ${{ inputs.docker_password }}
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ inputs.docker_username }}
+          password: ${{ inputs.docker_password }}
 
-  #     - name: Build the image
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: .
-  #         file: ./Dockerfile
-  #         push: true
-  #         tags: |
-  #           docker.io/${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
+      - name: Build the image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            docker.io/${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
 
-  #     - name: Retrieve image digest
-  #       id: image-digest
-  #       run: |
-  #         IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
-  #         echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+      - name: Retrieve image digest
+        id: image-digest
+        run: |
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
+          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
-  # package-helm:
-  #   runs-on: ubuntu-latest
-  #   needs: [repo-meta, containerize]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+  package-helm:
+    runs-on: ubuntu-latest
+    needs: [repo-meta, containerize]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #     - name: Setup yq tools
-  #       uses: mikefarah/yq@v4.35.2
+      - name: Setup yq tools
+        uses: mikefarah/yq@v4.35.2
 
-  #     - name: Update helm files
-  #       run: |
-  #         CHART_VERSION="$(cat VERSION_HELM)"
-  #         APP_VERSION="$(cat VERSION)"
-  #         HELM_FOLDER=${{ inputs.helm_folder }}
-  #         RUN_NUMBER=${{ github.run_number }}
+      - name: Update helm files
+        run: |
+          CHART_VERSION="$(cat VERSION_HELM)"
+          APP_VERSION="$(cat VERSION)"
+          HELM_FOLDER=${{ inputs.helm_folder }}
+          RUN_NUMBER=${{ github.run_number }}
 
-  #         REPO_NAME=${{ needs.repo-meta.outputs.repo_name }}
-  #         IMAGE_NAME=${{ needs.repo-meta.outputs.image_name }}
-  #         IMAGE_DIGEST=${{ needs.containerize.outputs.image_digest }}
-  #         DOCKERHUB_USERNAME=${{ inputs.docker_username }}
+          REPO_NAME=${{ needs.repo-meta.outputs.repo_name }}
+          IMAGE_NAME=${{ needs.repo-meta.outputs.image_name }}
+          IMAGE_DIGEST=${{ needs.containerize.outputs.image_digest }}
+          DOCKERHUB_USERNAME=${{ inputs.docker_username }}
 
-  #         yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
-  #         yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
+          yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
+          yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
 
-  #         yq eval -i ".image.repository = \"${DOCKERHUB_USERNAME}/${REPO_NAME}\"" "./${HELM_FOLDER}/values.yaml"
-  #         yq eval -i ".image.tag = \"${IMAGE_NAME}@${IMAGE_DIGEST}\"" "./${HELM_FOLDER}/values.yaml"
+          yq eval -i ".image.repository = \"${DOCKERHUB_USERNAME}/${REPO_NAME}\"" "./${HELM_FOLDER}/values.yaml"
+          yq eval -i ".image.tag = \"${IMAGE_NAME}@${IMAGE_DIGEST}\"" "./${HELM_FOLDER}/values.yaml"
 
-  #         helm lint ./${HELM_FOLDER}
+          helm lint ./${HELM_FOLDER}
 
-  #     - name: Setup Helm
-  #       uses: azure/setup-helm@v3
-  #       with:
-  #         version: ${{ inputs.helm_version }}
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ inputs.helm_version }}
 
-  #     - name: Package Helm chart
-  #       run: |
-  #         helm package ./${{ inputs.helm_folder }}
-  #         helm repo index ./${{ inputs.helm_folder }} --url ${{ secrets.helm_repo_url }}
+      - name: Package Helm chart
+        run: |
+          helm package ./${{ inputs.helm_folder }}
+          helm repo index ./${{ inputs.helm_folder }} --url ${{ secrets.helm_repo_url }}
 
-  #     - name: Clone Helm repository
-  #       uses: actions/checkout@v3
-  #       with:
-  #         repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
-  #         ref: ${{ secrets.helm_repo_target }}
-  #         token: ${{ secrets.helm_repo_pat }}
-  #         path: ./${{ secrets.helm_repo_name }}
+      - name: Clone Helm repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
+          ref: ${{ secrets.helm_repo_target }}
+          token: ${{ secrets.helm_repo_pat }}
+          path: ./${{ secrets.helm_repo_name }}
 
-  #     - name: Replace helm packages
-  #       run: |
-  #         APP_FOLDER="./${{ secrets.helm_repo_name }}/${{ inputs.helm_folder }}/${{ needs.repo-meta.outputs.repo_name }}"
-  #         mkdir -p ${APP_FOLDER}
-  #         cp *.tgz ${APP_FOLDER}/
+      - name: Replace helm packages
+        run: |
+          APP_FOLDER="./${{ secrets.helm_repo_name }}/${{ inputs.helm_folder }}/${{ needs.repo-meta.outputs.repo_name }}"
+          mkdir -p ${APP_FOLDER}
+          cp *.tgz ${APP_FOLDER}/
 
-  #     - name: Push Helm packages
-  #       run: |
-  #         cd ${{ secrets.helm_repo_name }}
-  #         git config user.name "${GITHUB_ACTOR}"
-  #         git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      - name: Push Helm packages
+        run: |
+          cd ${{ secrets.helm_repo_name }}
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
-  #         git pull origin ${{ secrets.helm_repo_target }}
-  #         git add .
-  #         git commit -m "${{ github.ref_name }}"
-  #         git push origin ${{ secrets.helm_repo_target }}
+          git pull origin ${{ secrets.helm_repo_target }}
+          git add .
+          git commit -m "${{ github.ref_name }}"
+          git push origin ${{ secrets.helm_repo_target }}
