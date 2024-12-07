@@ -133,8 +133,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: docker.io
-          username: ${{ inputs.docker_username }}
-          password: ${{ inputs.docker_password }}
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
 
       - name: Build the image
         uses: docker/build-push-action@v5
@@ -143,12 +143,12 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            docker.io/${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
+            docker.io/${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
 
       - name: Retrieve image digest
         id: image-digest
         run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
           echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
   package-helm:
@@ -171,7 +171,7 @@ jobs:
           REPO_NAME=${{ needs.repo-meta.outputs.repo_name }}
           IMAGE_NAME=${{ needs.repo-meta.outputs.image_name }}
           IMAGE_DIGEST=${{ needs.containerize.outputs.image_digest }}
-          DOCKERHUB_USERNAME=${{ inputs.docker_username }}
+          DOCKERHUB_USERNAME=${{ secrets.docker_username }}
 
           yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
           yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
