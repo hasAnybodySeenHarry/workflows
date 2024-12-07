@@ -46,7 +46,7 @@ on:
         required: true
 
 env:
-  GO_VERSION: ${{ inputs.go_version }}
+  GO_VERSION: "1.22"
 
 jobs:
   unit-tests:
