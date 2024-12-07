@@ -129,7 +129,7 @@ jobs:
       - name: Retrieve image digest
         id: image-digest
         run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repository_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
           echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
   package-helm:
