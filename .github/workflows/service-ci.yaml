@@ -13,15 +13,34 @@ on:
         type: string
         description: "The folder that composes the Helm Chart, default is app"
         default: "app"
-env:
-  GO_VERSION: ${{ inputs.go_version }}
-  HELM_VERSION: ${{ inputs.helm_version }}
-  HELM_FOLDER: ${{ inputs.helm_folder }}
+    secrets:
+      docker_username:
+        required: true
+        type: string
+      docker_password:
+        required: true
+        type: string
+      helm_repo_url:
+        required: true
+        type: string
+      helm_repo_pat:
+        required: true
+        type: string
+      helm_repo_target:
+        required: true
+        type: string
+      helm_repo_owner:
+        required: true
+        type: string
+      helm_repo_name:
+        required: true
+        type: string
+
 jobs:
   unit-tests:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/run-unit-tests.yaml@main
     with:
-      go_version: ${{ env.GO_VERSION }}
+      go_version: ${{ inputs.go_version }}
 
   create-unittest-issue:
     needs: [unit-tests]
@@ -44,7 +63,7 @@ jobs:
   static-analysis:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/run-static-analysis.yaml@main
     with:
-      go_version: ${{ env.GO_VERSION }}
+      go_version: ${{ inputs.go_version }}
 
   create-linting-issue:
     needs: [static-analysis]
@@ -67,8 +86,8 @@ jobs:
   validate-helm:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
     with:
-      helm_version: ${{ env.HELM_VERSION }}
-      helm_folder: ${{ env.HELM_FOLDER }}
+      helm_version: ${{ inputs.helm_version }}
+      helm_folder: ${{ inputs.helm_folder }}
 
   repo-meta:
     runs-on: ubuntu-latest
@@ -105,8 +124,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          username: ${{ inputs.docker_username }}
+          password: ${{ inputs.docker_password }}
 
       - name: Build the image
         uses: docker/build-push-action@v5
@@ -115,12 +134,12 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
+            docker.io/${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}
 
       - name: Retrieve image digest
         id: image-digest
         run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ secrets.DOCKERHUB_USERNAME }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ inputs.docker_username }}/${{ needs.repo-meta.outputs.repo_name }}:${{ needs.repo-meta.outputs.image_name }}" | cut -d '@' -f 2)
           echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
   package-helm:
@@ -137,13 +156,13 @@ jobs:
         run: |
           CHART_VERSION="$(cat VERSION_HELM)"
           APP_VERSION="$(cat VERSION)"
-          HELM_FOLDER=${{ env.HELM_FOLDER }}
+          HELM_FOLDER=${{ inputs.helm_folder }}
           RUN_NUMBER=${{ github.run_number }}
 
           REPO_NAME=${{ needs.repo-meta.outputs.repo_name }}
           IMAGE_NAME=${{ needs.repo-meta.outputs.image_name }}
           IMAGE_DIGEST=${{ needs.containerize.outputs.image_digest }}
-          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_USERNAME=${{ inputs.docker_username }}
 
           yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
           yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
@@ -156,34 +175,34 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v3
         with:
-          version: ${{ env.HELM_VERSION }}
+          version: ${{ inputs.helm_version }}
 
       - name: Package Helm chart
         run: |
-          helm package ./${{ env.HELM_FOLDER }}
-          helm repo index ./${{ env.HELM_FOLDER }} --url ${{ secrets.HELM_REPO_URL }}
+          helm package ./${{ inputs.helm_folder }}
+          helm repo index ./${{ inputs.helm_folder }} --url ${{ secrets.helm_repo_url }}
 
       - name: Clone Helm repository
         uses: actions/checkout@v3
         with:
-          repository: ${{ vars.HELM_REPO_OWNER }}/${{ secrets.HELM_REPO_NAME }}
-          ref: ${{ secrets.HELM_REPO_TARGET }}
-          token: ${{ secrets.HELM_REPO_PAT }}
-          path: ./${{ secrets.HELM_REPO_NAME }}
+          repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
+          ref: ${{ secrets.helm_repo_target }}
+          token: ${{ secrets.helm_repo_pat }}
+          path: ./${{ secrets.helm_repo_name }}
 
       - name: Replace helm packages
         run: |
-          APP_FOLDER="./${{ secrets.HELM_REPO_NAME }}/${{ env.HELM_FOLDER }}/${{ needs.repo-meta.outputs.repo_name }}"
+          APP_FOLDER="./${{ secrets.helm_repo_name }}/${{ inputs.helm_folder }}/${{ needs.repo-meta.outputs.repo_name }}"
           mkdir -p ${APP_FOLDER}
           cp *.tgz ${APP_FOLDER}/
 
       - name: Push Helm packages
         run: |
-          cd ${{ secrets.HELM_REPO_NAME }}
+          cd ${{ secrets.helm_repo_name }}
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
-          git pull origin ${{ secrets.HELM_REPO_TARGET }}
+          git pull origin ${{ secrets.helm_repo_target }}
           git add .
           git commit -m "${{ github.ref_name }}"
-          git push origin ${{ secrets.HELM_REPO_TARGET }}
+          git push origin ${{ secrets.helm_repo_target }}
