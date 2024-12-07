@@ -107,8 +107,41 @@ jobs:
   repo-meta:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/gen-repo-meta.yaml@main
 
+  sonar-analysis:
+    needs: [unit-tests, static-analysis, validate-helm]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/analyze-code-quality.yaml@main
+    secrets:
+      sonar_token: ${{ secrets.sonar_token }}
+
+  containerize:
+    needs: [repo-meta, sonar-analysis]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/containerize.yaml@main
+    with:
+      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
+      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
+    secrets:
+      docker_username: ${{ secrets.docker_username }}
+      docker_password: ${{ secrets.docker_password }}
+
+  package-helm:
+    needs: [repo-meta, containerize]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/package-helm-chart.yaml@main
+    with:
+      helm_version: ${{ inputs.helm_version }}
+      helm_folder: ${{ inputs.helm_folder }}
+      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
+      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
+      image_digest: ${{ needs.containerize.outputs.image_digest }}
+    secrets:
+      docker_username: ${{ secrets.docker_username }}
+      helm_repo_url: ${{ secrets.helm_repo_url }}
+      helm_repo_pat: ${{ secrets.helm_repo_pat }}
+      helm_repo_target: ${{ secrets.helm_repo_target }}
+      helm_repo_owner: ${{ secrets.helm_repo_owner }}
+      helm_repo_name: ${{ secrets.helm_repo_name }}
+
   changelog:
-    needs: [repo-meta]
+    needs: [containerize]
     if: ${{ inputs.require_changelog }}
     runs-on: ubuntu-latest
     steps:
@@ -142,36 +175,3 @@ jobs:
           git add CHANGELOG.md
           git commit -m "Update CHANGELOG for ${{ github.sha }}"
           git push origin ${{ github.ref_name }}
-
-  sonar-analysis:
-    needs: [unit-tests, static-analysis, validate-helm]
-    uses: hasAnybodySeenHarry/workflows/.github/workflows/analyze-code-quality.yaml@main
-    secrets:
-      sonar_token: ${{ secrets.sonar_token }}
-
-  containerize:
-    needs: [repo-meta, sonar-analysis]
-    uses: hasAnybodySeenHarry/workflows/.github/workflows/containerize.yaml@main
-    with:
-      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
-      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
-    secrets:
-      docker_username: ${{ secrets.docker_username }}
-      docker_password: ${{ secrets.docker_password }}
-
-  package-helm:
-    needs: [repo-meta, containerize]
-    uses: hasAnybodySeenHarry/workflows/.github/workflows/package-helm-chart.yaml@main
-    with:
-      helm_version: ${{ inputs.helm_version }}
-      helm_folder: ${{ inputs.helm_folder }}
-      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
-      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
-      image_digest: ${{ needs.containerize.outputs.image_digest }}
-    secrets:
-      docker_username: ${{ secrets.docker_username }}
-      helm_repo_url: ${{ secrets.helm_repo_url }}
-      helm_repo_pat: ${{ secrets.helm_repo_pat }}
-      helm_repo_target: ${{ secrets.helm_repo_target }}
-      helm_repo_owner: ${{ secrets.helm_repo_owner }}
-      helm_repo_name: ${{ secrets.helm_repo_name }}
