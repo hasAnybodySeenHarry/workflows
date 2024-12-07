@@ -29,6 +29,10 @@ on:
         required: false
         type: string
         default: "Code Linting failed"
+      require_changelog:
+        required: false
+        type: boolean
+        default: false
     secrets:
       docker_username:
         required: true
@@ -105,6 +109,7 @@ jobs:
 
   changelog:
     needs: [repo-meta]
+    if: ${{ inputs.require_changelog }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -135,7 +140,7 @@ jobs:
 
           git pull origin ${{ github.ref_name }}
           git add CHANGELOG.md
-          git commit -m "Update CHANGELOG for ${{ github.ref_name }}"
+          git commit -m "Update CHANGELOG for ${{ github.sha }}"
           git push origin ${{ github.ref_name }}
 
   sonar-analysis:
