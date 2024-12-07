@@ -16,25 +16,18 @@ on:
     secrets:
       docker_username:
         required: true
-        type: string
       docker_password:
         required: true
-        type: string
       helm_repo_url:
         required: true
-        type: string
       helm_repo_pat:
         required: true
-        type: string
       helm_repo_target:
         required: true
-        type: string
       helm_repo_owner:
         required: true
-        type: string
       helm_repo_name:
         required: true
-        type: string
 
 jobs:
   unit-tests:
