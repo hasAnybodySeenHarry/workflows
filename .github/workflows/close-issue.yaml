@@ -1,4 +1,4 @@
-name: Close Issue Workflow
+name: Close Issue
 on:
   workflow_call:
     inputs:
