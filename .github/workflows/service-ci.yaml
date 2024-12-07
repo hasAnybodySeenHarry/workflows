@@ -62,17 +62,17 @@ jobs:
       commit_hash: ${{ github.sha }}
       branch_name: ${{ github.ref_name }}
 
-  # close-unittest-issues:
-  #   needs: [unit-tests]
-  #   uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
-  #   with:
-  #     issue_label: ${{ inputs.unittest_issue_label }}
-  #     issue_title: ${{ inputs.unittest_issue_title }}
+  close-unittest-issues:
+    needs: [unit-tests]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
+    with:
+      issue_label: ${{ inputs.unittest_issue_label }}
+      issue_title: ${{ inputs.unittest_issue_title }}
 
-  # static-analysis:
-  #   uses: hasAnybodySeenHarry/workflows/.github/workflows/run-static-analysis.yaml@main
-  #   with:
-  #     go_version: ${{ inputs.go_version }}
+  static-analysis:
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/run-static-analysis.yaml@main
+    with:
+      go_version: ${{ inputs.go_version }}
 
   # create-linting-issue:
   #   needs: [static-analysis]
