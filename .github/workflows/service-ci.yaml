@@ -13,6 +13,22 @@ on:
         type: string
         description: "The folder that composes the Helm Chart, default is app"
         default: "app"
+      unittest_issue_label:
+        required: false
+        type: string
+        default: "bug"
+      unittest_issue_title:
+        required: false
+        type: string
+        default: "Unit Testing failed"
+      linting_issue_label:
+        required: false
+        type: string
+        default: "technical debt"
+      linting_issue_title:
+        required: false
+        type: string
+        default: "Code Linting failed"
     secrets:
       docker_username:
         required: true
@@ -50,8 +66,8 @@ jobs:
     needs: [unit-tests]
     uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
     with:
-      issue_label: "bug"
-      issue_title: "Unit Testing failed"
+      issue_label: ${{ inputs.unittest_issue_label }}
+      issue_title: ${{ inputs.unittest_issue_title }}
 
   static-analysis:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/run-static-analysis.yaml@main
@@ -73,8 +89,8 @@ jobs:
     needs: [static-analysis]
     uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
     with:
-      issue_label: "technical debt"
-      issue_title: "Code Linting failed"
+      issue_label: ${{ inputs.linting_issue_label }}
+      issue_title: ${{ inputs.linting_issue_title }}
 
   validate-helm:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/close-issue.yaml@main
