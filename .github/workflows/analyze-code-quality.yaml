@@ -18,7 +18,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.sonar_token }}
-          SONAR_HOST_URL: https://sonarcloud.io
 
       - name: SonarQube Quality Gate
         id: sonarqube-quality-gate-check
