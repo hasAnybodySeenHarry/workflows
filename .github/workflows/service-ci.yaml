@@ -105,7 +105,7 @@ jobs:
       helm_folder: ${{ inputs.helm_folder }}
 
   repo-meta:
-    uses: hasAnybodySeenHarry/workflows/.github/workflows/gen-repo-meta.yaml@main
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/gen-repo-meta.yaml@v2
 
   sonar-analysis:
     needs: [unit-tests, static-analysis, validate-helm]
