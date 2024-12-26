@@ -45,14 +45,13 @@ jobs:
           CHART_VERSION="$(cat VERSION_HELM)"
           APP_VERSION="$(cat VERSION)"
           HELM_FOLDER=${{ inputs.helm_folder }}
-          RUN_NUMBER=${{ github.run_number }}
 
           REPO_NAME=${{ inputs.repository_name }}
           IMAGE_TAG=${{ inputs.image_tag }}
           IMAGE_DIGEST=${{ inputs.image_digest }}
           DOCKERHUB_USERNAME=${{ secrets.docker_username }}
 
-          yq eval -i ".version = \"${CHART_VERSION}.${RUN_NUMBER}\"" "./${HELM_FOLDER}/Chart.yaml"
+          yq eval -i ".version = \"${CHART_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
           yq eval -i ".appVersion = \"${APP_VERSION}\"" "./${HELM_FOLDER}/Chart.yaml"
 
           yq eval -i ".image.repository = \"${DOCKERHUB_USERNAME}/${REPO_NAME}\"" "./${HELM_FOLDER}/values.yaml"
