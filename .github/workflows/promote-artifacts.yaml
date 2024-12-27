@@ -39,7 +39,7 @@ jobs:
     - name: Promote Image
       run: |
         echo "Pulling image: ${IMAGE_NAME}:${{ inputs.base_commit }}"
-        IMAGE_NAME=docker.io/${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repository_name }}
+        IMAGE_NAME=docker.io/${{ secrets.docker_username }}/"${{ inputs.chart_name }}"
         docker pull ${IMAGE_NAME}:${{ inputs.base_commit }}
 
         NEW_TAG=${{ inputs.base_commit }}-${{ inputs.destination }}
