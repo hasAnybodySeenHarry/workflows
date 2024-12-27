@@ -1,0 +1,68 @@
+name: Promote Image and Chart
+on:
+  workflow_call:
+    inputs:
+      destination:
+        required: true
+        type: string
+      base_commit:
+        required: true
+        type: string
+      chart_version:
+        required: true
+        type: string
+      chart_name:
+        required: true
+        type: string
+    secrets:
+      docker_username:
+        required: true
+      docker_password:
+        required: true
+      helm_repo_owner:
+        required: true
+      helm_repo_name:
+        required: true
+      helm_repo_pat:
+        required: true
+jobs:
+  promote-image:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: ${{ secrets.docker_username }}
+        password: ${{ secrets.docker_password }}
+
+    - name: Promote Image
+      run: |
+        echo "Pulling image: ${IMAGE_NAME}:${{ inputs.base_commit }}"
+        IMAGE_NAME=docker.io/${{ secrets.docker_username }}/${{ needs.repo-meta.outputs.repository_name }}
+        docker pull ${IMAGE_NAME}:${{ inputs.base_commit }}
+
+        NEW_TAG=${{ inputs.base_commit }}-${{ inputs.destination }}
+        docker tag ${IMAGE_NAME}:${{ inputs.base_commit }} ${IMAGE_NAME}:${NEW_TAG}
+
+        echo "Pushing image: ${IMAGE_NAME}:${NEW_TAG}"
+        docker push ${IMAGE_NAME}:${NEW_TAG}
+
+  promote-chart:
+    runs-on: ubuntu-latest
+    needs: [promote-image]
+    steps:
+    - name: Trigger Promotion
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        token: ${{ secrets.helm_repo_pat }}
+        repository: ${{ secrets.helm_repo_owner }}/${{ secrets.helm_repo_name }}
+        event-type: promote
+        client-payload: |
+          {
+            "ref": "${{ github.ref }}",
+            "sha": "${{ github.sha }}",
+            "chart_name": "${{ inputs.chart_name }}",
+            "version": "${{ inputs.chart_version }}",
+            "dest": "${{ inputs.destination }}"
+          }
