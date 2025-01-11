@@ -50,6 +50,7 @@ jobs:
       - name: Retrieve image digest
         id: image-digest
         run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "docker.io/${{ secrets.docker_username }}/${{ inputs.repository_name }}:${{ inputs.image_tag }}" | cut -d '@' -f 2)
+          docker pull "docker.io/${{ secrets.docker_username }}/${{ inputs.repository_name }}:${{ inputs.image_tag }}"
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ secrets.docker_username }}/${{ inputs.repository_name }}:${{ inputs.image_tag }}" | cut -d '@' -f 2)
           echo "Image Digest is ${IMAGE_DIGEST}"
           echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
