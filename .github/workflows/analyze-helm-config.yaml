@@ -22,4 +22,4 @@ jobs:
 
     - name: Analyze config
       run: |
-        trivy config ${{ inputs.issue_title }} --exit-code 1 --severity CRITICAL
+        trivy config ${{ inputs.helm_folder }} --exit-code 1 --severity CRITICAL
