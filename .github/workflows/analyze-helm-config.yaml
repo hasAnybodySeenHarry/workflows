@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       helm_folder:
-        is_required: true
+        required: true
         type: string
 jobs:
   trivy-analysis:
