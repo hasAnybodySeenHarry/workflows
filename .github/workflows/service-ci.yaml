@@ -104,11 +104,16 @@ jobs:
       helm_version: ${{ inputs.helm_version }}
       helm_folder: ${{ inputs.helm_folder }}
 
+  analyze-helm:
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/analyze-helm-config.yaml@main
+    with:
+      helm_folder: ${{ inputs.helm_folder }}
+
   repo-meta:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/gen-repo-meta.yaml@v2
 
   sonar-analysis:
-    needs: [unit-tests, static-analysis, validate-helm]
+    needs: [unit-tests, static-analysis, validate-helm, analyze-helm]
     uses: hasAnybodySeenHarry/workflows/.github/workflows/analyze-code-quality.yaml@main
     secrets:
       sonar_token: ${{ secrets.sonar_token }}
