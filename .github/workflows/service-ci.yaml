@@ -133,8 +133,14 @@ jobs:
       docker_username: ${{ secrets.docker_username }}
       docker_password: ${{ secrets.docker_password }}
 
+  sign-attest:
+    needs: [containerize]
+    uses: hasAnybodySeenHarry/workflows/.github/workflows/manage-supply-chain.yaml@main
+    with:
+      image_digest: ${{ needs.containerize.outputs.image_digest }}
+
   package-helm:
-    needs: [repo-meta, containerize]
+    needs: [repo-meta, containerize, sign-attest]
     uses: hasAnybodySeenHarry/workflows/.github/workflows/package-helm-chart.yaml@main
     with:
       helm_version: ${{ inputs.helm_version }}
