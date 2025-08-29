@@ -53,10 +53,25 @@ jobs:
           --type cyclonedx \
           "$IMAGE_REF"
 
+    # - name: Verify Signature
+    #   run: |
+    #     cosign verify \
+    #       --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+    #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    #       "$IMAGE_REF"
+
+    # - name: Verify Attestation
+    #   run: |
+    #     cosign verify-attestation \
+    #       --type cyclonedx \
+    #       --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+    #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    #       "$IMAGE_REF"
+
     - name: Verify Signature
       run: |
         cosign verify \
-          --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+          --certificate-identity-regexp "^https://github\.com/hasAnybodySeenHarry/workflows/\.github/workflows/manage-supply-chain\.yaml@refs/(heads|tags)/.+$" \
           --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
           "$IMAGE_REF"
 
@@ -64,6 +79,6 @@ jobs:
       run: |
         cosign verify-attestation \
           --type cyclonedx \
-          --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+          --certificate-identity-regexp "^https://github\.com/hasAnybodySeenHarry/workflows/\.github/workflows/manage-supply-chain\.yaml@refs/(heads|tags)/.+$" \
           --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
           "$IMAGE_REF"
