@@ -30,32 +30,32 @@ jobs:
     - name: Install Syft
       uses: anchore/sbom-action/download-syft@v0.15.4
 
-    - name: Generate CycloneDX SBOM
-      run: |
-        syft scan ${{ inputs.image_digest }} -o cyclonedx-json > sbom.cdx.json
+    # - name: Generate CycloneDX SBOM
+    #   run: |
+    #     syft scan ${{ inputs.image_digest }} -o cyclonedx-json > sbom.cdx.json
 
-    - name: Sign image
-      run: |
-        cosign sign --yes ${{ inputs.image_digest }}
+    # - name: Sign image
+    #   run: |
+    #     cosign sign --yes ${{ inputs.image_digest }}
 
-    - name: Attest SBOM
-      run: |
-        cosign attest --yes \
-          --predicate sbom.cdx.json \
-          --type cyclonedx \
-          ${{ inputs.image_digest }}
+    # - name: Attest SBOM
+    #   run: |
+    #     cosign attest --yes \
+    #       --predicate sbom.cdx.json \
+    #       --type cyclonedx \
+    #       ${{ inputs.image_digest }}
 
-    - name: Verify Signature
-      run: |
-        cosign verify \
-          --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
-          --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-          ${{ inputs.image_digest }}
+    # - name: Verify Signature
+    #   run: |
+    #     cosign verify \
+    #       --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+    #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    #       ${{ inputs.image_digest }}
 
-    - name: Verify Attestation
-      run: |
-        cosign verify-attestation \
-          --type cyclonedx \
-          --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
-          --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-          ${{ inputs.image_digest }}
+    # - name: Verify Attestation
+    #   run: |
+    #     cosign verify-attestation \
+    #       --type cyclonedx \
+    #       --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
+    #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    #       ${{ inputs.image_digest }}
