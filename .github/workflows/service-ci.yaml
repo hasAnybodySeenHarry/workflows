@@ -141,6 +141,9 @@ jobs:
     uses: hasAnybodySeenHarry/workflows/.github/workflows/manage-supply-chain.yaml@main
     with:
       image_digest: ${{ needs.containerize.outputs.image_digest }}
+    secrets:
+      docker_username: ${{ secrets.docker_username }}
+      docker_password: ${{ secrets.docker_password }}
 
   package-helm:
     needs: [repo-meta, containerize, sign-attest]
