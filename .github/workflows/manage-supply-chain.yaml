@@ -11,8 +11,11 @@ on:
       docker_password:
         required: true
 jobs:
-  package-helm:
+  sign-attest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
     - name: Login to DockerHub
       uses: docker/login-action@v3

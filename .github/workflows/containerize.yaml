@@ -20,9 +20,6 @@ on:
 jobs:
   containerize:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     outputs:
       image_digest: ${{ steps.image-digest.outputs.IMAGE_DIGEST }}
     steps:

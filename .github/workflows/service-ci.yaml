@@ -125,9 +125,6 @@ jobs:
 
   containerize:
     needs: [repo-meta, sonar-analysis]
-    permissions:
-      contents: read
-      id-token: write
     uses: hasAnybodySeenHarry/workflows/.github/workflows/containerize.yaml@main
     with:
       image_tag: ${{ needs.repo-meta.outputs.image_tag }}
@@ -138,6 +135,9 @@ jobs:
 
   sign-attest:
     needs: [containerize]
+    permissions:
+      contents: read
+      id-token: write
     uses: hasAnybodySeenHarry/workflows/.github/workflows/manage-supply-chain.yaml@main
     with:
       image_digest: ${{ needs.containerize.outputs.image_digest }}
