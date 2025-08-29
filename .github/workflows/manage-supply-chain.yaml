@@ -5,6 +5,12 @@ on:
       image_digest:
         required: true
         type: string
+      image_tag:
+        required: true
+        type: string
+      repository_name:
+        required: true
+        type: string
     secrets:
       docker_username:
         required: true
@@ -16,6 +22,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      IMAGE_REF: docker.io/${{ secrets.docker_username }}/${{ inputs.repository_name }}@${{ inputs.image_digest }}
     steps:
     - name: Login to DockerHub
       uses: docker/login-action@v3
@@ -32,25 +40,25 @@ jobs:
 
     - name: Generate CycloneDX SBOM
       run: |
-        syft scan ${{ inputs.image_digest }} -o cyclonedx-json > sbom.cdx.json
+        syft scan "$IMAGE_REF" -o cyclonedx-json > sbom.cdx.json
 
     - name: Sign image
       run: |
-        cosign sign --yes ${{ inputs.image_digest }}
+        cosign sign --yes "$IMAGE_REF"
 
     - name: Attest SBOM
       run: |
         cosign attest --yes \
           --predicate sbom.cdx.json \
           --type cyclonedx \
-          ${{ inputs.image_digest }}
+          "$IMAGE_REF"
 
     - name: Verify Signature
       run: |
         cosign verify \
           --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
           --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-          ${{ inputs.image_digest }}
+          "$IMAGE_REF"
 
     - name: Verify Attestation
       run: |
@@ -58,4 +66,4 @@ jobs:
           --type cyclonedx \
           --certificate-identity-regexp "https://github\.com/${{ github.workflow_ref }}" \
           --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-          ${{ inputs.image_digest }}
+          "$IMAGE_REF"

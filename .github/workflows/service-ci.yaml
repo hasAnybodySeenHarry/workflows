@@ -134,13 +134,15 @@ jobs:
       docker_password: ${{ secrets.docker_password }}
 
   sign-attest:
-    needs: [containerize]
+    needs: [repo-meta, containerize]
     permissions:
       contents: read
       id-token: write
     uses: hasAnybodySeenHarry/workflows/.github/workflows/manage-supply-chain.yaml@main
     with:
       image_digest: ${{ needs.containerize.outputs.image_digest }}
+      image_tag: ${{ needs.repo-meta.outputs.image_tag }}
+      repository_name: ${{ needs.repo-meta.outputs.repository_name }}
     secrets:
       docker_username: ${{ secrets.docker_username }}
       docker_password: ${{ secrets.docker_password }}
