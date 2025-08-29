@@ -1,4 +1,4 @@
-name: Package Helm Chart
+name: Manage Supply Chain
 on:
   workflow_call:
     inputs:
